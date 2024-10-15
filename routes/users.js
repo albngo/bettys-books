@@ -4,6 +4,15 @@ const bcrypt = require("bcrypt");
 const router = express.Router();
 const saltRounds = 10;
 
+// Middleware function to check if the user is logged in
+const redirectLogin = (req, res, next) => {
+    if (!req.session.userId ) {
+      res.redirect('./login') // redirect to the login page
+    } else { 
+        next (); // move to the next middleware function
+    } 
+}
+
 // Route for registration
 router.get('/register', function (req, res, next) {
     res.render('register.ejs');
@@ -67,8 +76,10 @@ router.post('/loggedin', function (req, res, next) {
                 }
 
                 if (result === true) {
+                    // Save user session here, when login is successful
+                    req.session.userId = req.body.username;
                     // Send a success message
-                    res.send('Login successful! Welcome back, ' + userName + '!');
+                    res.send('Login successful! Welcome back, ' + userName + '!' + '<a href='+'/'+'>Home</a>');
                 } else {
                     // Send a failure message
                     res.send('Login failed! Incorrect username or password.');
@@ -78,6 +89,20 @@ router.post('/loggedin', function (req, res, next) {
             // User does not exist
             res.send('Login failed! Incorrect username or password.');
         }
+    });
+});
+
+// Route to list users (excluding passwords)
+router.get('/list', redirectLogin, function (req, res, next) {
+    const sql = 'SELECT username, first_name, last_name, email FROM users';
+
+    db.query(sql, function (err, result) {
+        if (err) {
+            return res.status(500).send('Error fetching users from the database');
+        }
+
+        // Render the list of users using the 'listusers.ejs' view
+        res.render('listusers.ejs', { users: result });
     });
 });
 
